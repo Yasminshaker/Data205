@@ -199,16 +199,8 @@ id_latlong$lat <- as.numeric(id_latlong$lat)
 
 ```{r}
 
-
-
-# Create the ggplot object
 map1 <- ggplot(id_latlong, aes(x = lat, y = long)) +
   geom_point(aes(text = paste("Year:", Year, "<br>City:", City)))
-
-# Print the ggplot object
-print(map1)
-
-# Modify the ggplot object (map1) to include fill gradient and customize theme
 map2 <- map1 + 
   scale_fill_gradient(name = "x") + 
   theme(
@@ -220,37 +212,10 @@ map2 <- map1 +
     rect = element_blank()
   )
 
-# Print the modified ggplot object (map2)
-print(map2)
-
-# Convert the modified ggplot object to a plotly object
 map3 <- ggplotly(map2, tooltip = "text") 
-
-# Print the plotly object
 print(map3)
 ```
 
-
-
-```{r}
-# Making a map (not working)
-
-theme_set(theme_minimal())
-
-moco_map <- get_stamenmap(
-  bbox = c(left = -77.5745 , bottom = 38.9028 , right = -76.8247, top = 39.3715), 
-  maptypes = "terrain",
-  zoom = 10
-)
-
-ggmap(moco_map)
-
-ggmap(moco_map) +
-  geom_point(data = id_latlong,
-             aes(x = long, y = lat),
-             size = .1) +
-  theme_map
-```
 
 
 ```{r}
