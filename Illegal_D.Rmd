@@ -162,7 +162,7 @@ id4_j <- id3 %>%
 id4_j2 <- id3 %>%
   filter(!is.na(latitude))
 
-register_google(key = 'AIzaSyBsC3dx5XmkJtytwqzb82Mb6uzXodGWDS4')
+register_google(key = '...')
 
 id5 <- id4_j %>%
   mutate(geocoded_location = geocode(Address))
