@@ -1,0 +1,266 @@
+---
+title: "Illegal Dumping"
+author: "yasmin"
+date: "2023-11-28"
+output: html_document
+---
+
+```{r}
+# Loading packages 
+
+library(tidyverse)
+library(tidygeocoder)
+library(plotly)
+library(maps)
+library(ggmap)
+library(ggplot2)
+library(ggthemes)
+
+
+library(clustMixType)
+
+```
+
+```{r}
+# Reading in data 
+id <- read_csv("https://data.montgomerycountymd.gov/api/views/d985-d2ak/rows.csv?accessType=DOWNLOAD")
+```
+
+```{r}
+id2 <- id %>% select(`Year case was opened`, `Case description`, `Case sub-type`, `Street number`, `Street Name`, City, Zip, Location)
+
+colnames(id2)[colnames(id2) == "Year case was opened"] <- "Year"
+colnames(id2)[colnames(id2) == "Case description"] <- "Description"
+colnames(id2)[colnames(id2) == "Case sub-type"] <- "Type"
+
+head(id2)
+```
+
+
+
+```{r}
+# Before recoding 
+sort(table(id2$City))
+```
+
+```{r}
+recode_city <- function(data) {
+  data %>%
+    mutate(City = recode(City,
+      "ASHTON" = "Ashton",
+      "BARNESVILLE" = "Barnesville",
+      "BEALLSVILLE" = "Beallsville",
+      "BELTSVILLE" = "Beltsville",
+      "BETHESDA" = "Bethesda",
+      "BOYDS" = "Boyds",
+      "BRINKLOW" = "Brinklow",
+      "BROOKEVILLE" = "Brookeville", "Brookville" = "Brookeville",
+      "BURTONSVILLE" = "Burtonsville",
+      "CABIN JOHN" = "Cabin John",
+      "CHEVY CHASE" = "Chevy Chase",
+      "CLARKSBURG" = "Clarksburg",
+      "DAMASCUS" = "Damascus",
+      "DERWOOD" = "Derwood",
+      "DICKERSON" = "Dickerson",
+      "GAITHERSBURG" = "Gaithersburg", "Gaitherburg" = "Gaithersburg",
+      "GARRETT PARK" = "Garrett Park",
+      "GERMANTOWN" = "Germantown",
+      "HIGHLAND" = "Highland",
+      "KENSINGTON" = "Kensington",
+      "LAUREL" = "Laurel",
+      "MONTGOMERY VILLAGE" = "Montgomery Village",
+      "MOUNT AIRY" = "Mount Airy",
+      "Norht Potomac" = "North Potomac",
+      "OLNEY" = "Olney",
+      "POOLESVILLE" = "Poolesville",
+      "POTOMAC" = "Potomac",
+      "ROCKVILLE" = "Rockville", "rockville" = "Rockville",
+      "SANDY SPRING" = "Sandy Spring",
+      "SILVER SPRING" = "Silver Spring", "Silver Sprig" = "Silver Spring", "Silver spring" = "Silver Spring",
+      "SPENCERVILLE" = "Spencerville",
+      "TAKOMA PARK" = "Takoma Park", "Takoma park" = "Takoma Park",
+      "WASHINGTON GROVE" = "Washington Grove"))}
+
+id2 <- id2 %>% recode_city()
+sort(table(id2$City))
+```
+
+```{r}
+sort(table(id2$`Type`))
+```
+
+
+```{r}
+v1 <- ggplot(data = id2) + 
+  geom_bar(aes(x = City))+ 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+  labs(title = "Cities with the most cases", x = "City", y = "Number of Cases")
+
+
+v1
+
+
+```
+
+```{r}
+v3 <- ggplot(data = id2) +
+  geom_bar(mapping = aes(x = `Type`, fill = `Type`)) +
+  ggtitle("Most Common Type of Waste" ) +
+  ylab ("Number of Cases") +
+  xlab("Types of Waste") + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none")
+
+v3
+```
+
+
+```{r}
+           
+              
+topcitites <- subset(id2, City %in% c("Silver Spring", "Germantown", "Gaithersburg", "Rocville", "Bethesda", "Potomac"))
+
+v2 <- ggplot(data = topcitites) + 
+  geom_bar(aes(x = City, fill = Type), position = "dodge") + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+  labs(title = "Cities with the most cases", x = "City", y = "Number of Cases")
+
+
+v2
+```
+
+
+```{r}
+
+```
+
+
+
+```{r}
+
+
+id3 <- id2 %>% mutate(county = "Montgomery County")
+id3 <- id3 %>% mutate(state = "Maryland")
+id3 <- id3 %>% mutate(Address = paste(`Street number`, `Street Name`, City, county, state, Zip, sep = " , "))
+id3 <- id3 %>% mutate(Address = sub(", ", "", Address))
+
+# Assuming your data frame is named 'yourDataFrame' and the column is named 'columnName'
+id3 <- id3 %>%
+  mutate(Address = gsub("NA","", Address))
+
+id3 <- id3 %>% mutate(latitude = as.numeric(sub(".*\\((.*)\\s.*", "\\1", id$Location)), longitude = as.numeric(sub(".*\\s(.*)\\)", "\\1", id$Location)))
+
+id3$Description <- NULL
+id3$`Street number` <- NULL
+id3$`Street Name` <- NULL
+id3$Zip <- NULL
+id3$Location <- NULL
+id3$county <- NULL
+id3$state <- NULL
+
+id4_j <- id3 %>%
+  filter(is.na(latitude))
+id4_j2 <- id3 %>%
+  filter(!is.na(latitude))
+
+register_google(key = 'AIzaSyBsC3dx5XmkJtytwqzb82Mb6uzXodGWDS4')
+
+id5 <- id4_j %>%
+  mutate(geocoded_location = geocode(Address))
+
+id_latlong <- full_join(id4_j2, id5)
+                      
+```
+
+```{r}
+head(id_latlong)
+```
+
+```{r}
+# fixing long ang lat 
+id_latlong$lat <- paste(id_latlong$latitude, id_latlong$geocoded_location$lon)
+
+id_latlong$long <- paste(id_latlong$longitude, id_latlong$geocoded_location$lat)
+
+id_latlong <- id_latlong %>%
+  mutate(lat = gsub("NA","", lat))
+id_latlong <- id_latlong %>%
+  mutate(long = gsub("NA","", long))
+
+
+id_latlong$Address <- NULL
+id_latlong$latitude <- NULL
+id_latlong$longitude <- NULL
+id_latlong$geocoded_location <- NULL
+
+id_latlong$long <- as.numeric(id_latlong$long)
+id_latlong$lat <- as.numeric(id_latlong$lat)
+
+```
+
+```{r}
+
+
+
+# Create the ggplot object
+map1 <- ggplot(id_latlong, aes(x = lat, y = long)) +
+  geom_point(aes(text = paste("Year:", Year, "<br>City:", City)))
+
+# Print the ggplot object
+print(map1)
+
+# Modify the ggplot object (map1) to include fill gradient and customize theme
+map2 <- map1 + 
+  scale_fill_gradient(name = "x") + 
+  theme(
+    axis.text.x = element_blank(),
+    axis.text.y = element_blank(),
+    axis.ticks = element_blank(),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    rect = element_blank()
+  )
+
+# Print the modified ggplot object (map2)
+print(map2)
+
+# Convert the modified ggplot object to a plotly object
+map3 <- ggplotly(map2, tooltip = "text") 
+
+# Print the plotly object
+print(map3)
+```
+
+
+
+```{r}
+# Making a map (not working)
+
+theme_set(theme_minimal())
+
+moco_map <- get_stamenmap(
+  bbox = c(left = -77.5745 , bottom = 38.9028 , right = -76.8247, top = 39.3715), 
+  maptypes = "terrain",
+  zoom = 10
+)
+
+ggmap(moco_map)
+
+ggmap(moco_map) +
+  geom_point(data = id_latlong,
+             aes(x = long, y = lat),
+             size = .1) +
+  theme_map
+```
+
+
+```{r}
+# looking at description
+x<- which(!is.na(str_match(id2$Description,"public")))
+t<- id2[x,]
+
+x<- which(!is.na(str_match(id2$Description,"plastic")))
+p<- id2[x,]
+```
+
+
+

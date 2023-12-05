@@ -56,6 +56,8 @@ print(weather3)
 ```
 
 
+
+
 ```{r}
 # five number summary - min/max/median, Q1 and Q2
 print(fivenum(weather3$`Avg. Temp.`))
@@ -79,7 +81,57 @@ p2 <- ggplot(weather3, aes(x = Year, y = `Avg. Temp.`, color = Month)) +
   xlab("Year") +
   ylab ("Avg. Temperatures") +
   theme_minimal(base_size = 10)
-p2 + geom_point() 
+p2 + geom_line() 
 ```
 
+
+```{r}
+calculate_avgtemps <- function(data, years) {
+  result <- lapply(years, function(year) {
+    filtered_data <- data %>% filter(Year %in% c(year))
+    avg_temp <- mean(filtered_data$`Avg. Temp.`, na.rm = TRUE)
+    avg_max_temp <- mean(filtered_data$`Max. Temp.`, na.rm = TRUE)
+    avg_min_temp <- mean(filtered_data$`Min. Temp.`, na.rm = TRUE)
+    return(data.frame(Year = year, Avg_Temp = avg_temp, Avg_Max_Temp = avg_max_temp, Avg_Min_Temp = avg_min_temp))
+  })
+
+  new <- do.call(rbind, result)
+  return(new)
+}
+
+years <- c(2022:2000)
+avgtemp <- calculate_avgtemps(weather2, years)
+
+print(avgtemp)
+
+
+```
+
+```{r}
+ggplot(avgtemp, aes(x = Year)) +
+  labs(title = "Avg Temperatures") +
+  xlab("Year") +
+  ylab("Avg. Temperatures") +
+  theme_minimal(base_size = 10) +
+  geom_point(aes(y = Avg_Max_Temp), color = "#91250E") +
+  geom_smooth(aes(y = Avg_Max_Temp), color = "red") +
+  geom_point(aes(y = Avg_Min_Temp), color = "#0F237F") +
+  geom_smooth(aes(y = Avg_Min_Temp), color = "blue")
+
+```
+
+
+```{r}
+# linear regression model
+model <- lm(Avg_Temp ~ Year, data = avgtemp)
+summary(model)
+```
+```{r}
+
+ggplot(avgtemp, aes(x = Year, y = Avg_Temp)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "purple") +
+  labs(title = "Linear Regression Analysis", x = "Year", y = "Average Temperature")
+
+```
 
