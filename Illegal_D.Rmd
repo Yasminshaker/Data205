@@ -136,7 +136,7 @@ dmpact2 <- dplyr::select(dmpact2, -`Street number`, -`Street Name`, -Zip, -count
 noloatlong <- dmpact2 %>%
   filter(is.na(Location))
 
-register_google(key = 'AIzaSyBsC3dx5XmkJtytwqzb82Mb6uzXodGWDS4')
+register_google(key = '...')
 
 dmpact3 <- noloatlong %>%
   mutate(geocoded_location = geocode(Address))
