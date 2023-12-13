@@ -1,0 +1,266 @@
+---
+title: "illegal dumping activity"
+author: "yasmin"
+date: "2023-12-05"
+output: html_document
+---
+
+```{r}
+# Loading Packages and reading in Data
+
+library(tidyverse)
+library(tidygeocoder)
+library(ggmap)
+library(plotly)
+library(mapview)
+library(leaflet)
+library(stats)
+library(htmlwidgets)
+
+dmpact <- read_csv("https://data.montgomerycountymd.gov/api/views/d985-d2ak/rows.csv?accessType=DOWNLOAD")
+```
+
+
+```{r}
+# Selecting necessary columns
+
+dmpact1 <- dmpact %>% select(`Year case was opened`, `Case description`, `Case sub-type`, `Street number`, `Street Name`, City, Zip, Location)
+
+colnames(dmpact1)[colnames(dmpact1) == "Year case was opened"] <- "Year"
+colnames(dmpact1)[colnames(dmpact1) == "Case description"] <- "Description"
+colnames(dmpact1)[colnames(dmpact1) == "Case sub-type"] <- "Type"
+
+```
+
+
+```{r}
+# Looking at the different cities 
+
+sort(table(dmpact1$City))
+```
+
+
+```{r}
+# fixing city columns 
+
+recode_city <- function(data) {
+  data %>%
+    mutate(City = recode(City,
+      "ASHTON" = "Ashton",
+      "BARNESVILLE" = "Barnesville",
+      "BEALLSVILLE" = "Beallsville",
+      "BELTSVILLE" = "Beltsville",
+      "BETHESDA" = "Bethesda",
+      "BOYDS" = "Boyds",
+      "BRINKLOW" = "Brinklow",
+      "BROOKEVILLE" = "Brookeville", "Brookville" = "Brookeville",
+      "BURTONSVILLE" = "Burtonsville",
+      "CABIN JOHN" = "Cabin John",
+      "CHEVY CHASE" = "Chevy Chase",
+      "CLARKSBURG" = "Clarksburg",
+      "DAMASCUS" = "Damascus",
+      "DERWOOD" = "Derwood",
+      "DICKERSON" = "Dickerson",
+      "GAITHERSBURG" = "Gaithersburg", "Gaitherburg" = "Gaithersburg",
+      "GARRETT PARK" = "Garrett Park",
+      "GERMANTOWN" = "Germantown",
+      "HIGHLAND" = "Highland",
+      "KENSINGTON" = "Kensington",
+      "LAUREL" = "Laurel",
+      "MONTGOMERY VILLAGE" = "Montgomery Village",
+      "MOUNT AIRY" = "Mount Airy",
+      "Norht Potomac" = "North Potomac",
+      "OLNEY" = "Olney",
+      "POOLESVILLE" = "Poolesville",
+      "POTOMAC" = "Potomac",
+      "ROCKVILLE" = "Rockville", "rockville" = "Rockville",
+      "SANDY SPRING" = "Sandy Spring",
+      "SILVER SPRING" = "Silver Spring", "Silver Sprig" = "Silver Spring", "Silver spring" = "Silver Spring",
+      "SPENCERVILLE" = "Spencerville",
+      "TAKOMA PARK" = "Takoma Park", "Takoma park" = "Takoma Park",
+      "WASHINGTON GROVE" = "Washington Grove"))}
+
+dmpact1 <- dmpact1 %>% recode_city()
+sort(table(dmpact1$City))
+```
+
+
+```{r}
+# Bar graph to all the cities
+
+ggplot(data = dmpact1) + 
+  geom_bar(aes(x = City))+ 
+  theme_light()+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+  labs(title = "Cities with the most cases", x = "City", y = "Number of Cases")
+
+```
+
+
+```{r}
+# Graphing the different types of waste
+colorpal <- c("#07264B", "#094081", "#0868ac", "#2b8cbe", "#4eb3d3", "#7bccc4", "#a8ddb5", "#ccebc5", "#e0f3db", "#f7fcf0")
+
+ggplot(data = dmpact1) +
+  geom_bar(mapping = aes(x = `Type`, fill = `Type`)) + 
+  labs(title = "Public Lands have the highest number of Cases", x = "Types of Waste", y = "Number of Cases")+
+  scale_fill_manual(values = colorpal) +  
+  theme_light() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none")
+
+
+```
+
+
+```{r}
+
+yearcount <- as.data.frame(table(dmpact1$Year))
+
+colnames(yearcount) <- c("Year", "Number_of_Cases")
+
+ggplot(yearcount, aes(x = Year, y = Number_of_Cases))  + 
+  theme_light() + scale_fill_brewer(palette = "GnBu") + 
+  geom_point() + theme(axis.text.x = element_text(angle = 45)) + 
+  labs(title = "Number of Cases Peaked at 2020",
+       x = "Year",
+       y = "Number of Cases")
+
+```
+
+`   
+```{r}
+# Combining types of waste and top cities with the most activity
+
+topcities <- subset(dmpact1, City %in% c("Silver Spring", "Germantown", "Gaithersburg", "Rocville", "Bethesda", "Potomac"))
+
+ggplot(data = topcities) + 
+  geom_bar(aes(x = City, fill = Type), position = "dodge") + 
+  theme_light() + scale_fill_manual(values = colorpal) +  
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+  labs(title = "Silver Spring's Public and Residential land is the most polluted ", x = "Top 5 Cities", y = "Number of Cases")
+
+```
+
+
+```{r}
+# Combining address columns to geocode missing latitude and longitude 
+# Before running this chunk, you have to ente ryour own API key 
+
+dmpact2 <- dmpact1 %>% mutate(county = "Montgomery County", state = "Maryland", Address = paste(`Street number`, `Street Name`, City, county, state, Zip, sep = ", ")) %>%
+  mutate(Address = sub(", ", " ", Address), Address = gsub("NA", "", Address))
+
+dmpact2 <- dplyr::select(dmpact2, -`Street number`, -`Street Name`, -Zip, -county, -state)
+
+noloatlong <- dmpact2 %>%
+  filter(is.na(Location))
+
+register_google(key = '...') 
+
+dmpact3 <- noloatlong %>%
+  mutate(geocoded_location = geocode(Address))
+
+file_path <- "path/to/your/folder/your_dataset.csv"
+
+
+```
+
+
+```{r}
+# Fixing Long and Lat columns 
+
+dmpact4 <- full_join(dmpact2, dmpact3)
+
+dmpact4 <- dmpact4 %>% mutate(longitude = as.numeric(sub(".*\\((.*)\\s.*", "\\1", dmpact4$Location)), latitude = as.numeric(sub(".*\\s(.*)\\)", "\\1", dmpact4$Location))) %>% mutate(lat = paste(latitude, geocoded_location$lat), long = paste(longitude, geocoded_location$lon)) %>%
+  mutate(lat = gsub("NA","", lat)) %>% mutate(long = gsub("NA","", long))
+
+dmpact4 <- dplyr::select(dmpact4, -Address, -latitude, -longitude, -geocoded_location, -Location, -Description)
+
+dmpact4$long <- as.numeric(dmpact4$long)
+dmpact4$lat <- as.numeric(dmpact4$lat)
+
+print(dmpact4)
+
+```
+
+
+```{r}
+# Mapping 
+
+map <- ggplot(dmpact4, aes(x = long, y = lat)) 
+
+map0 <- map + 
+  theme_light()+ 
+  theme(
+    axis.text.x = element_blank(),
+    axis.text.y = element_blank(),
+    axis.ticks = element_blank(),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    rect = element_blank()) +
+  geom_point(aes(text=paste(paste("Year:", Year, "<br>"),   
+                         paste("Type:", Type, "<br>"))))
+
+map1 <- ggplotly(map0, tooltip = "text") 
+print(map1)
+
+```
+
+
+```{r}
+# Map 2
+
+map2 <- leaflet(dmpact4) %>%
+  addTiles() %>%
+  addCircleMarkers( lng = ~long, lat = ~lat, radius = 0.5, color = "black", popup = ~paste("Year: ", Year, "<br>Type: ", Type, "<br>City: ", City))
+
+map2
+
+```
+
+
+```{r}
+# saving map as html 
+
+library(htmlwidgets)
+saveWidget(map1, file="map1.html")
+saveWidget(map2, file="map2.html")
+```
+
+
+```{r}
+# Will there be over 300 cases next year?
+
+yearcount$Year <- as.numeric(as.character(yearcount$Year))
+threshold <- 300
+yearcount$Above_Threshold <- ifelse(yearcount$Number_of_Cases > threshold, 1, 0)
+logistic_model <- glm(Above_Threshold ~ Year, data = yearcount, family = "binomial")
+new_data <- data.frame(Year = 2024)
+predicted_prob <- predict(logistic_model, newdata = new_data, type = "response")
+predicted_outcome <- ifelse(predicted_prob > 0.5, 1, 0)
+cat("Predicted Probability:", predicted_prob, "\n")
+cat("Predicted Outcome (Above 300 cases):", predicted_outcome, "\n")
+
+```
+
+
+```{r}
+# Function to test different number of cases for any year 
+
+predict_above_threshold <- function(data, threshold, new_year) {
+  data$Above_Threshold <- ifelse(data$Number_of_Cases > threshold, 1, 0)
+  logistic_model <- glm(Above_Threshold ~ Year, data = data, family = "binomial")
+  new_data <- data.frame(Year = new_year)
+  predicted_prob <- predict(logistic_model, newdata = new_data, type = "response")
+    predicted_outcome <- ifelse(predicted_prob > 0.5, 1, 0)
+  cat("Predicted Probability:", predicted_prob, "\n")
+  cat("Predicted Outcome (Above", threshold, "cases):", predicted_outcome, "\n")
+  return(predicted_outcome)}
+
+
+threshold <- 700
+year <- 2024
+
+predicted_outcome <- predict_above_threshold(yearcount, threshold, year)
+```
+
+

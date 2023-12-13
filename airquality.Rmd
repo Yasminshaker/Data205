@@ -1,0 +1,147 @@
+---
+title: "Untitled"
+author: "yasmin"
+date: "2023-11-08"
+output: html_document
+---
+
+```{r}
+library(dplyr)
+library(tidyverse)
+```
+
+
+
+```{r, message=FALSE}
+# Function to read in data from EPA site
+
+ processdata <- function(year)
+  { zip_url <- paste0("https://aqs.epa.gov/aqsweb/airdata/annual_aqi_by_county_", year, ".zip")
+  temp <- tempfile(fileext = ".zip")
+  download.file(zip_url, temp)
+  unzip(temp, exdir = tempdir())
+  csv_file <- file.path(tempdir(), paste0("annual_aqi_by_county_", year, ".csv"))
+  data <- readr::read_csv(csv_file)
+  mrow <- data %>% filter(State == "Maryland" & County == "Montgomery")
+  airdata <<- rbind(airdata, mrow)
+  unlink(temp)
+  unlink(csv_file)}
+airdata <- data.frame()
+for (year in 2022:2000) {
+  processdata(year)}
+```
+
+
+```{r}
+summary(airdata)
+```
+
+```{r}
+sum(is.na(airdata))
+# there are no NA in this data set
+```
+
+
+
+```{r}
+# Graphing number of good days we had each year
+
+ggplot(data = airdata, aes(x = Year, y = `Good Days`)) +
+  geom_point() +
+  labs(
+    title = "We have more good days now than we did in the past",
+    x = "Years",
+    y = "Number of Good Days")
+```
+
+```{r}
+# Graphing number of unhelathy days we had each year
+
+ggplot(data = airdata, aes(x = Year, y = `Unhealthy Days`)) +
+  geom_point() +
+  labs(
+    title = "We are Seeing less Unhealthy Days",
+    x = "Years",
+    y = "Number of Good Days")
+```
+
+```{r}
+#What kind of days did we mostly see
+
+ggplot(airdata, aes(x = Year)) +
+  geom_bar(aes(y = `Good Days`, fill = "Good Days"), stat = "identity", position = "dodge") +
+  geom_bar(aes(y = `Moderate Days`, fill = "Moderate Days"), stat = "identity", position = "dodge") +  
+  geom_bar(aes(y = `Unhealthy for Sensitive Groups Days`, fill = "USG Days"), stat = "identity", position = "dodge") +
+  geom_bar(aes(y = `Unhealthy Days`, fill = "Unhealthy Days"), stat = "identity", position = "dodge") +
+  geom_bar(aes(y = `Very Unhealthy Days`, fill = "Very Unhealthy Days"), stat = "identity", position = "dodge") +
+  labs(x = "Year", y = "Number of Days", title = "The frequency of 'Good Days' is on the rise.") + 
+  theme_minimal() +
+  scale_fill_manual(values = c("Good Days" = "#a8ddb5", "Moderate Days" = "#7bccc4", "USG Days" = "#4eb3d3", "Unhealthy Days" = "#0868ac", "Very Unhealthy Days" = "#094081")) +
+  guides(fill = guide_legend(title = "Air Quality Categories"))
+```
+
+
+```{r}
+# Graphing all the max. AQI values for each year 
+
+max <- ggplot(data = airdata, aes(x = Year, y = `Max AQI` )) + 
+  geom_point() +
+  labs(title = "Decreasing Max AQI",
+       x = "Year",
+       y = "AQI Value") +
+  theme_light() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
+
+max 
+
+```
+
+
+```{r}
+# Graphing all the median  AQI values for each year 
+
+median <- ggplot(data = airdata, aes(x = Year, y = `Median AQI`)) + 
+  geom_point() +
+  labs(title = "Is the Median AQI rising?",
+       x = "Year",
+       y = "AQI Value") +
+  theme_light() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
+
+median
+```
+
+
+```{r}
+# Graphing both max and median on the same graph 
+
+ggplot(airdata, aes(x = Year)) +
+  labs(title = "The Airquality seems to be improving" ,
+       x = "Year",
+       y = "AQI Value") +
+  theme_minimal(base_size = 10) +
+  geom_point(aes(y = `Max AQI`, color = "Max AQI"), size = 3) + 
+  geom_point(aes(y = `Median AQI`, color = "Median AQI"), size = 3) +
+  geom_smooth(aes(y = `Max AQI`, color = "Max AQI"), method = "auto", se = FALSE, size = 1) +
+  geom_smooth(aes(y = `Median AQI`, color = "Median AQI"), method = "auto", se = FALSE, size = 1) +
+  scale_color_manual(values = c("Max AQI" = "#9C8AEB", "Median AQI" = "#8AC3EB"),
+                     name = "AQI Type",
+                     labels = c("Max AQI", "Median AQI")) +
+  scale_y_continuous(breaks = seq(0, 200, 10)) +
+  theme(legend.position = "top", axis.text.x = element_text(angle = 45, hjust = 1))
+is 
+
+
+```
+
+
+```{r}
+# Conducting a Pearsons Correlatoion test to see if there is a correlation between the maximum and median AQI values we are seeing-
+# According to the results- as the max AQI values increase we will also see higher median AQI values
+
+cat("Correlation coefficient:", cor(airdata$`Max AQI`, airdata$`Median AQI`), "\n")
+print(cor.test(airdata$`Max AQI`, airdata$`Median AQI`))
+
+```
+
+

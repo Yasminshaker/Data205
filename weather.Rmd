@@ -1,0 +1,174 @@
+---
+title: "Weather"
+author: "yasmin"
+date: "2023-11-01"
+output: html_document
+---
+
+```{r}
+#Loading necesssary packages 
+library(tidyverse)
+library(dplyr)
+library(rvest)
+library(ggplot2)
+library(RColorBrewer)
+
+```
+
+
+```{r}
+# Reading in data 
+
+url <- "https://datacentral.press-citizen.com/weather-data/montgomery-county/24031/2023-09-01/table/"
+
+# Reading HTML content from url and extracting the data 
+weather <- html_table(read_html(url))
+weather1 <- weather[[1]]
+print(weather1)
+
+```
+
+
+```{r}
+# Doing a little DW
+
+#extracted year, month, and text from month column
+year <- substr(weather1$Month, 1, 4)
+date <- substr(weather1$Month, 5, 8)
+text <- substr(weather1$Month, 9, nchar(weather1$Month))
+
+# Combining date columns with the original data 
+weather2 <- cbind(weather1, Year = year, date = date, Text = text)
+
+# splitting up month and year
+split <- strsplit(as.character(weather2$Text), ", ")
+
+# Extract Month and Year separately
+weather2$Month <- sapply(split, function(x) x[1])
+weather2$Year <- as.integer(sapply(split, function(x) x[2]))
+
+# Removing unecessary columns 
+weather2$Text <- NULL
+weather2$date <- NULL
+
+# Rearrange the columns and selecting specific rows 
+weather3 <- weather2 %>% select(Year, Month, `Avg. Temp.`, `Min. Temp.`, `Max. Temp.`, `Precipitation`, `Heating Degree Days`, `Cooling Degree Days`) %>%filter(Year > 1999)
+
+print(weather3)
+```
+
+
+```{r}
+# five number summary 
+print(fivenum(weather3$`Avg. Temp.`))
+```
+
+
+```{r}
+# Exploring Avg Temp
+hist(weather3$`Avg. Temp.`)
+```
+
+
+```{r}
+# first look at average tempeatures 
+
+mc <- c("#9C8AEB", "#8AA6EB", "#8AC3EB", "#8ADFEB", "#8AEBCE", "#8AEBAF", "#8AEB99", "#9DEB8A", "#BBEB8A", "#D2EB8A", "#E7EB8A", "#EBD88A")
+
+
+p2 <- ggplot(weather3, aes(x = Year, y = `Avg. Temp.`, color = Month)) +
+  labs(title = "Avg Temperatures") + 
+  theme_minimal(base_size = 10) +
+  xlab("Year") + ylab("Avg. Temperatures") +
+  scale_color_manual(values = mc) + geom_line()
+p2 + geom_point()
+
+```
+
+
+```{r}
+#Seperating the past five years and their avg for facet graph
+
+weatheravg <- weather3 %>%
+  filter(Year %in% 2017:2022) %>%
+  select(Year, Month, `Avg. Temp.`)
+
+weatheravg$Month <- factor(weatheravg$Month, levels = month.name, ordered = TRUE)
+head(weatheravg)
+```
+
+
+```{r}
+# facet wrap for avg temp for past 5 years
+
+ggplot(weatheravg, aes(x = Month, y = `Avg. Temp.`, group = Year, color = as.factor(Year))) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Do We end the year with a higher temperature than the year before?",
+       x = "Month",
+       y = "Average Temperature") +
+  theme_minimal() +
+ theme(legend.position = "none", axis.text.x = element_text(angle = 45, hjust = 1)) +
+  facet_wrap(~Year, scales = "free_y")+
+  scale_color_manual(values = mc)
+
+
+```
+
+
+```{r}
+# Calcucating average temp, min, and max temperatures for all the years 
+# by combinging all the columns for each year and dividing them appropriately
+
+calculate_avgtemps <- function(data, years) {
+  result <- lapply(years, function(year) {
+    filtered_data <- data %>% filter(Year %in% c(year))
+    avg_temp <- mean(filtered_data$`Avg. Temp.`, na.rm = TRUE)
+    avg_max_temp <- mean(filtered_data$`Max. Temp.`, na.rm = TRUE)
+    avg_min_temp <- mean(filtered_data$`Min. Temp.`, na.rm = TRUE)
+    return(data.frame(Year = year, Avg_Temp = avg_temp, Avg_Max_Temp = avg_max_temp, Avg_Min_Temp = avg_min_temp))})
+  new <- do.call(rbind, result)
+  return(new)}
+years <- c(2022:2000)
+avgtemp <- calculate_avgtemps(weather2, years)
+
+print(avgtemp)
+
+
+```
+
+
+```{r}
+# Gra[hing min and max average temperatures
+
+ggplot(avgtemp, aes(x = Year)) +
+  labs(title = "Temperature are Rising") +
+  xlab("Year") +
+  ylab("Avg. Temperatures") +
+  theme_minimal(base_size = 10) +
+  geom_point(aes(y = Avg_Max_Temp), color = "#A1BF99") +
+  geom_smooth(aes(y = Avg_Max_Temp), se = FALSE, color = "#34562B") +
+  geom_point(aes(y = Avg_Min_Temp), color = "#79afcf") +
+  geom_smooth(aes(y = Avg_Min_Temp), se = FALSE, color = "#094081") 
+
+
+
+```
+
+
+```{r}
+# linear regression model to see patterns of the avg temperatures for each year
+model <- lm(Avg_Temp ~ Year, data = avgtemp)
+summary(model)
+
+```
+
+
+```{r}
+ggplot(avgtemp, aes(x = Year, y = Avg_Temp)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "#0868ac") +
+  labs(title = "Temperatures are Increasing", x = "Year", y = "Average Temperature")
+
+```
+

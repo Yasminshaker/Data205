@@ -1,0 +1,126 @@
+---
+title: "water"
+author: "yasmin"
+date: "2023-12-05"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+library(leaflet)
+library(ggplot2)
+```
+
+
+```{r}
+water <- read_csv('water.csv')
+print(water)
+```
+
+
+```{r}
+water$Date <- as.Date(water$Date, format = "%m/%d/%y")
+water$Day <- format(water$Date, "%d")
+water$Month <- format(water$Date, "%m")
+water$Year <- format(water$Date, "%Y")
+water <- water %>% select(-Date, -Day)
+water1 <- subset(water, Year %in% c(2000:2022))
+
+water1$Month <- recode(water1$Month, "01" = "JAN")
+water1$Month <- recode(water1$Month, "06" = "JUNE")
+water1$Month <- recode(water1$Month, "07" = "JUL")
+water1$Month <- recode(water1$Month, "08" = "SEPT")
+water1$Month <- recode(water1$Month, "09" = "AUG")
+water1$Month <- recode(water1$Month, "10" = "OCT")
+water1$Month <- recode(water1$Month, "11" = "NOV")
+
+water1$Long <- gsub("-", "", water1$Long)
+water1$Long  <- paste("-", water1$Long , sep = "")
+
+water1$Lat <- as.numeric(water1$Lat)
+water1$Long <- as.numeric(water1$Long)
+
+print(water1)
+```
+
+```{r}
+summary(water1)
+
+```
+
+
+```{r}
+# looking at water narritive 
+table(water1$Narrative)
+```
+
+```{r}
+ggplot(data = water1) + 
+  geom_bar(aes(x = Narrative)) + theme_minimal()  
+
+```
+
+
+```{r}
+ggplot(data = water1) + 
+  geom_bar(aes(x = Year, fill = Narrative), position = "stack") + 
+  theme_light() + scale_fill_brewer(palette = "GnBu") + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+  labs(title = "Moco's Water Quality is good", x = "Water Quality", y = "Count")
+```
+
+```{r}
+# Just graphing excellent snd poor water wqality
+water_pve <- water1 %>%
+  filter(Narrative %in% c("Excellent", "Poor"))
+
+ggplot(data = water_pve ) + 
+  geom_bar(aes(x = Year, fill = Narrative), position = "stack") + 
+  theme_light() + scale_fill_brewer(palette = "GnBu") + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+  labs(title = "More Cases of Excellent Water Quality", x = "Years", y = "Count")
+
+```
+
+
+```{r}
+# Finding average score for each year
+
+avgscore <- water1 %>%
+  group_by(Year) %>%
+  summarise(AverageScore = mean(SummaryScore, na.rm = TRUE))
+
+avgscore$Year <- as.numeric(avgscore$Year)
+avgscore$AverageScore <- as.numeric(avgscore$AverageScore)
+
+```
+
+```{r}
+# Linear Reression between year and water quality score
+
+model <- lm(AverageScore ~ Year, data = avgscore)
+summary(model)
+```
+
+
+```{r}
+# Graphing Linear Regression Model 
+
+model <- lm(AverageScore ~ Year, data = avgscore)
+
+ggplot(avgscore, aes(x = Year, y = AverageScore)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "#094081", formula = y ~ x) +
+  labs(title = "Increaing water quality scocres = better water quality", x = "Year",y = "Water Quality Scores")
+
+```
+
+
+```{r}
+map <- leaflet(water1) %>%
+  addTiles() %>%
+  addCircleMarkers( lng = ~Long, lat = ~Lat, radius = 0.5, color = "black", popup = ~paste("Year: ", Year, "<br>Narrative: ", Narrative))
+
+map
+```
+
