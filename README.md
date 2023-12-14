@@ -1,4 +1,6 @@
-The Following Project explores the environmental health of Montgomery County. Using a data set that showcases all the illegal dumping activity data set, the file "illegadal. Rmd" shows all the code I used to read in the data set, cleaning it, making graphs, and a map. It uses data from the Data Montgomery site. This data set is updated daily. 
+Montgomery County's Environment Project 
+
+ThMontgomery county's environment Project e Following Project explores the environmental health of Montgomery County. Using a data set that showcases all the illegal dumping activity data set, the file "illegadal. Rmd" shows all the code I used to read in the data set, cleaning it, making graphs, and a map. It uses data from the Data Montgomery site. This data set is updated daily. 
 
 Here is the link https://data.montgomerycountymd.gov/Environment/Illegal-Dumping-Activity/d985-d2ak 
 
